@@ -26,12 +26,12 @@ class Validator {
     }
     
     validateFromPullRequest({ prNumber, requiredStatus}) {
-        const that = this,
-              githubOptions = Object.assign({ number: prNumber }, defaultConfig.github.repository);
+        const githubOptions = Object.assign({ number: prNumber }, defaultConfig.github.repository);
+              
 
         return github.pullRequests.get(githubOptions)
                                   .then(response => helper.extractTeamPulseIds(response.body))
-                                  .then(itemIds => that.validateMany({itemIds, requiredStatus }))
+                                  .then(itemIds => this.validateMany.call(this, { itemIds, requiredStatus }))
                                   .then(() => github.issues.addLabels(_.assign({ body: [ requiredStatus ] }, githubOptions)))
                                   .catch(helper.logErrorAndExit); 
     }
@@ -47,7 +47,7 @@ class Validator {
                         const that = this;
                         pullRequestsForStatusUpdate = _.filter(response, issue => that._shouldVerify({ issue, requiredStatus}));
 
-                        return pullRequestsForStatusUpdate.map(item => items = helper.extractTeamPulseIds(item.body));
+                        return _.flatMap(pullRequestsForStatusUpdate, item => helper.extractTeamPulseIds(item.body))
                      })
                      .then(itemIds => that.validateMany({itemIds, requiredStatus }))
                      .then(() => that._addLabelsToMany({prNumbers: pullRequestsForStatusUpdate, label: requiredStatus}))
@@ -55,19 +55,16 @@ class Validator {
     }
 
     validateMany({ itemIds, requiredStatus }) {
-		const that = this,
-		      requests = _.map(itemIds, itemId => that.validateItem({ itemId, requiredStatus }));
+		const requests = _.map(itemIds, itemId => this.validateItem({ itemId, requiredStatus }));
 		
         return Promise.all(requests);
 	}
 
 	validateItem({ itemId, requiredStatus }) {
-		const that = this;
-		
         return teampulse.getItem(itemId)
 						.then(item => {
-                            that._throwIfFieldMissing(item, defaultConfig.teampulse.requiredFields);
-							return that._ensureStatus(item, requiredStatus);
+                            this._throwIfFieldMissing(item, defaultConfig.teampulse.requiredFields);
+							return this._ensureStatus(item, requiredStatus);
 						});
 	}
 
