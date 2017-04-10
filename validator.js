@@ -10,7 +10,7 @@ const GitHubApi = require('github'),
       teampulse = new TeampulseApi({
 		url: defaultConfig.teampulse.url
 	  });
-
+  
 class Validator {
     constructor() {
         this.config = defaultConfig;
