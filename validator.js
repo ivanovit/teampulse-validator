@@ -11,6 +11,8 @@ const GitHubApi = require('github'),
 		url: defaultConfig.teampulse.url
 	  });
 
+const dryRun = true;
+
 class Validator {
     constructor() {
         this.config = defaultConfig;
@@ -74,14 +76,24 @@ class Validator {
 	_throwIfFieldMissing(tpItem, requiredField) {
 		_.forEach(defaultConfig.teampulse.requiredFields, requiredField => {
 			if(!tpItem.fields[requiredField]) {
-				 throw `Missing required field ${requiredField}`;
+                if(dryRun) {
+                    console.log(`Missing field: ${requiredField} for tp ${tpItem.id}`);
+                    return;
+                }
+                 
+                 throw `Missing required field ${requiredField}`;
 			 }
 		});
 	}
 
 	_ensureStatus(tpItem, requiredStatus) {
 		if(tpItem.fields.Status !== requiredStatus) {
-			return teampulse.changeStatus(tpItem.id, requiredStatus)
+			if(dryRun) {
+               console.log(`Will change teampulse status to ${requiredStatus} for tp ${tpItem.id}`);
+               return Promise.resolve();
+           }
+            
+            return teampulse.changeStatus(tpItem.id, requiredStatus)
 		}
 
 		return Promise.resolve();
@@ -99,6 +111,10 @@ class Validator {
     _addLabelsToMany(prNumbers, label) {
        return Promise.all(_.map(prNumbers, prNumber => {
            let labelsOptions = Object.assign({ number: prNumber, body: [ requiredStatus ] }, defaultConfig.github.repository);
+           if(dryRun) {
+               console.log(`Will add ${label} label to ${prNumbers}`);
+               return Promise.resolve();
+           }
            return github.issues.addLabels.addLabels(labelsOptions);
        }));
     }
