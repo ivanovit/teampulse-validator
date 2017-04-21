@@ -53,6 +53,26 @@ class Teampulse {
         return requestPromise(putItemOptions);
     }
 
+    postCommentForItem(tpItem, comment) {
+        const postItemOptions = { 
+            url:  `${this.config.url}/api/comments`,
+            headers: {
+                'Authorization': `WRAP access_token="${this.wrap_access_token}"`,
+                'Content-Type': 'application/json',
+                'Accept': '*/*'
+            },
+            method: 'POST',
+            json: {
+                projectId: tpItem.projectId,
+                workItemId: tpItem.id,
+                description: comment,
+                type: "TeamPulse"
+            }
+        };
+
+        return requestPromise(postItemOptions);
+    }
+
     changeStatus(itemId, status) {
 		const propertiesToChange = { 
 			"Status":  status 

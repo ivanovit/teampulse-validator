@@ -1,32 +1,38 @@
-var program = require('commander'),
-	validator = require('./validator'),
-	helper = require('./helper');
+#!/usr/bin/env node
 
-program.command('validate')
-	   .description('Validate TeamPulse item')
-	   .option('-p, --from-pr [number]', 'Get items number from Pull Request description')
-	   .option('-i, --item <item>', 'TeamPulse item number')
-	   .option('-s, --ensure-tp-status <status>', "Ensure required status")
-	   .option('-f, --required-tp-fields <fields>', helper.split)
-	   .parse(process.argv)
-	   .action(cmd => { 
-			if(cmd.items) {
-				validator.validateMany({items: cmd.items, requiredStatus: cmd.ensureTpStatus});
-			} else {
-				validator.validateFromPullRequest({ prNumber : cmd.fromPr, requiredStatus: cmd.ensureTpStatus });
-			}
-	   });
+var teampulseService = require('./teampulseService'),
+	helper = require('./helper'),
+	yargs = require('yargs'),
+	defaultConfig = require('./config'),
+	_ = require('lodash');
 
-program.command('validate-pr-range')
-	   .description('Validate TeamPulse items')
-	   .option('-d, --days [number]', 'Get items number from Pull Request description')
-	   .option('-s, --ensure-tp-status <status>', "Ensure required status")
-	   .option('-f, --required-tp-fields <fields>', helper.split)
-	   .parse(process.argv)
-	   .action(cmd => {
-		   validator.validatePullRequestRange({ daysToValidate: cmd.days, requiredStatus: cmd.ensureTpStatus });
-	   });
-
-validator.initialize().then(() => {
-	program.parse(process.argv);
+teampulseService.initialize()
+				.then(() => {
+		yargs.usage('Usage: $0 <command> [options]')
+			.command('update-items', 'Validate ', yargs => {
+				try {
+					let fieldsToSet = helper.parseFieldsToSet(yargs.argv),
+						requiredFields = _.union(helper.asArray(yargs.argv.validateRequiredField), defaultConfig.teampulse.requiredFields);
+					
+					if (yargs.argv.fromPullRequest) {
+						teampulseService.updateItemsFromPullRequest({ prNumber : yargs.argv.fromPullRequest, fieldsToSet, requiredFields })
+										.then(() => process.exit())
+										.catch(helper.logErrorAndExit);
+					} else if(yargs.argv.fromCommitsRange) {
+						helper.parseAndGetCommitIds(yargs.argv)
+							.then(commits => teampulseService.updateItemsFromCommitsRange({ base: commits[0], head: commits[1], fieldsToSet, requiredFields }))
+							.then(() => process.exit())
+							.catch(helper.logErrorAndExit);
+					} 
+				} catch(e) {
+					helper.logErrorAndExit(e);
+				}
+			})
+			.alias('p', 'from-pull-request')
+			.alias('c', 'from-commits-range')
+			.array('from-commits-range')
+			.alias('s', 'set-field')
+			.alias('v', 'validate-required-field')
+			.argv;
 })
+.catch(helper.logErrorAndExit)

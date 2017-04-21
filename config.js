@@ -6,12 +6,20 @@ module.exports = {
             domain: process.env.TEAMPULSE_DOMAIN
         },
         url: "http://teampulse.telerik.com",
+        fields: {
+            status:   {
+                name: "Status",
+                values: {
+                    inReview: "In Review",
+                    readyForTest: "Ready For Test"
+                }
+            } 
+        },
         status: {
             inReview: "In Review",
-            //TODO: Check status name
             readyForTest: "Ready For Test"
         },
-        requiredFields: [ "Description" ]
+        requiredFields: [ ]
     },
     github: {
         credentials: {
@@ -21,9 +29,12 @@ module.exports = {
         },
         repository: {
             owner: "Icenium",
-			repo: "Ice"
+			repo: "fusion"
         },
-        teampulseIdRegex: "Related to: \\[#([0-9]{1,6})\\]"
+        teampulseIdRegex: "TP: \\[#([0-9]{1,6})\\]",
+        labels: {
+            noTeampulseItem: "no-teampulse-item"
+        }
     },
     daysToValidate: 2
 };
