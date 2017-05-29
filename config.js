@@ -28,8 +28,8 @@ module.exports = {
             password: process.env.GITHUB_PASSWORD
         },
         repository: {
-            owner: "Icenium",
-			repo: "fusion"
+            owner: process.env.GITHUB_OWNER || "Icenium",
+			repo: process.env.GITHUB_REPO  || "fusion"
         },
         teampulseIdRegex: "TP: \\[#([0-9]{1,6})\\]",
         labels: {
