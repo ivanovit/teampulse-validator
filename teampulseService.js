@@ -64,7 +64,8 @@ class TeampulseService {
 	_throwIfFieldMissing(tpItem, requiredFields) {
         let hasMissingField = false;
         _.forEach(requiredFields, requiredField => {
-			if(!tpItem.fields[requiredField]) {
+            const orRequiredFields = requiredField.split("|");
+			if (!_.some(orRequiredFields, orField => tpItem.fields[orField])) {
                 hasMissingField = true;
 				console.log(`Missing required field ${requiredField} for #${tpItem.id}`);
 			 }
@@ -90,7 +91,7 @@ class TeampulseService {
         }
 
         return teampulseItemIds;
-            }
+    }
 
     _setFields(tpItem, fields) {
         let propertiesToChange = _.filter(fields, field => tpItem.fields[field.name] !== field.value)
