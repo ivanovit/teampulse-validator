@@ -20,7 +20,7 @@ teampulseService.initialize()
 										.catch(helper.logErrorAndExit);
 					} else if(yargs.argv.fromCommitsRange) {
 						helper.parseAndGetCommitIds(yargs.argv)
-							.then(commits => teampulseService.updateItemsFromCommitsRange({ base: commits[0], head: commits[1], fieldsToSet, requiredFields }))
+							.then(commits => teampulseService.updateItemsFromCommitsRange({ from: commits[0], to: commits[1], localGitPath: yargs.argv.localGitPath, fieldsToSet, requiredFields }))
 							.then(() => process.exit())
 							.catch(helper.logErrorAndExit);
 					} 

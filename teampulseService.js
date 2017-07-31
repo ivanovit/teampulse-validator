@@ -1,4 +1,5 @@
 const GitHubApi = require('github'),
+      Git = require('simple-git'),
       TeampulseApi = require('./teampulse/teampulse'),
       defaultConfig = require('./config'),
       _ = require('lodash'),
@@ -9,7 +10,8 @@ const GitHubApi = require('github'),
       }), 	  
       teampulse = new TeampulseApi({
 		url: defaultConfig.teampulse.url
-	  });
+      }),
+      parallelRequests = 10;
 
 class TeampulseService {
     constructor() {
@@ -25,21 +27,55 @@ class TeampulseService {
         this.config = _.merge(defaultConfig, config);
     }
 
-    updateItemsFromCommitsRange({ base, head, fieldsToSet, requiredFields }) {
-        console.log(`Start checking items from commits range ${base} to ${head}`)
-        const compareCommitsParams = Object.assign({ base, head }, defaultConfig.github.repository);
+    updateItemsFromCommitsRange({ from, to, localGitPath, fieldsToSet, requiredFields }) {
+        console.log(`Start checking items from commits range ${from} to ${to}`);
 
+        const commitMessagesPromise = localGitPath ?
+            this._getCommitsMessagesLocal({ from, to, localGitPath }) : 
+            this._getCommitsMessagesGithub({ from, to });
+
+        return commitMessagesPromise.then(commitMessages => this._findPullRequestAndUpdateItemsLimited({ commitMessages, fieldsToSet, requiredFields }));
+    }
+
+    _findPullRequestAndUpdateItemsLimited({ commitMessages, fieldsToSet, requiredFields}) {
+        if(commitMessages.length === 0) {
+            return Promise.resolve();
+        }
+
+        var messagesToProcess = commitMessages.splice(0, parallelRequests);
+        return this._findPullRequestAndUpdateItems({ commitMessages: messagesToProcess, fieldsToSet, requiredFields })
+                   .then(() => this._findPullRequestAndUpdateItemsLimited({ commitMessages, fieldsToSet, requiredFields }));
+    }
+
+    _findPullRequestAndUpdateItems({ commitMessages, fieldsToSet, requiredFields }) {
+        let tasks = _.map(commitMessages, commitMessage => {
+            let prNumber = helper.extractPullRequestNumber(commitMessage);
+            if(prNumber) {
+                return this.updateItemsFromPullRequest({ prNumber, fieldsToSet, requiredFields });
+            }
+            
+            return Promise.resolve();
+        });
+        
+        return Promise.all(tasks);
+    }
+
+    _getCommitsMessagesGithub({ from, to }) {
+        const compareCommitsParams = Object.assign({ base: from, head: to }, defaultConfig.github.repository);
         return github.repos.compareCommits(compareCommitsParams).then(result => {
-            let tasks = _.map(result.commits, commitInfo => {
-                let prNumber = helper.extractPullRequestNumber(commitInfo.commit.message);
-                if(prNumber) {
-                    return this.updateItemsFromPullRequest({ prNumber, fieldsToSet, requiredFields });
+            return _.map(result.commits, commitInfo => commitInfo.commit.message);
+        });
+    }
+
+    _getCommitsMessagesLocal({ from, to, localGitPath }) {
+        return new Promise(function (resolve, reject) {
+            Git(localGitPath).log({ from, to }, (err, log) => {
+                if(err) {
+                    reject(err);
                 }
                 
-                return Promise.resolve();
+                resolve(_.map(log.all, commitLine => commitLine.message));
             });
-            
-            return Promise.all(tasks);
         });
     }
     
