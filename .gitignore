@@ -51,3 +51,6 @@ jspm_packages
 
 #VS Code
 .vscode
+
+#Reports
+reports

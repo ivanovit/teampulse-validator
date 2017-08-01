@@ -36,5 +36,10 @@ module.exports = {
             noTeampulseItem: "no-teampulse-item"
         }
     },
+    report: {
+        header: process.env.REPORT_HEADER || "",
+        formatter: process.env.REPORT_FORMATTER,
+        outputFile: process.env.REPORT_OUT_FILE
+    },
     daysToValidate: 2
 };

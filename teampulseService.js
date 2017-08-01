@@ -11,11 +11,13 @@ const GitHubApi = require('github'),
       teampulse = new TeampulseApi({
 		url: defaultConfig.teampulse.url
       }),
+      Report = require('./report/report'),
       parallelRequests = 10;
 
 class TeampulseService {
     constructor() {
         this.config = defaultConfig;
+        this.report = new Report(this.config);
     }
     
     initialize() {
@@ -34,7 +36,8 @@ class TeampulseService {
             this._getCommitsMessagesLocal({ from, to, localGitPath }) : 
             this._getCommitsMessagesGithub({ from, to });
 
-        return commitMessagesPromise.then(commitMessages => this._findPullRequestAndUpdateItemsLimited({ commitMessages, fieldsToSet, requiredFields }));
+        return commitMessagesPromise.then(commitMessages => this._findPullRequestAndUpdateItemsLimited({ commitMessages, fieldsToSet, requiredFields }))
+                                    .then(() => this.report.write());
     }
 
     _findPullRequestAndUpdateItemsLimited({ commitMessages, fieldsToSet, requiredFields}) {
@@ -80,22 +83,23 @@ class TeampulseService {
     }
     
     updateItemsFromPullRequest({ prNumber, fieldsToSet, requiredFields }) {
-        console.log(`Start checking items from PR #${prNumber}`)
+        console.log(`Start checking items from PR #${prNumber}`);
         const githubOptions = Object.assign({ number: prNumber }, defaultConfig.github.repository);
 
         return github.issues.get(githubOptions)
                                   .then(this._getTeampulseItems.bind(this))
-                                  .then(itemIds => Promise.all(_.map(itemIds, itemId => this.updateItemAndValidate({ itemId, fieldsToSet, requiredFields }))))
+                                  .then(itemIds => Promise.all(_.map(itemIds, itemId => this.updateItemAndValidate({ itemId, fieldsToSet, requiredFields, prNumber }))))
     }
 
-	updateItemAndValidate({ itemId, fieldsToSet, requiredFields }) {
-        console.log(`Checking teampulse item #${itemId}`)
+	updateItemAndValidate({ itemId, fieldsToSet, requiredFields, prNumber }) {
+        console.log(`Checking teampulse item #${itemId}`);
         return teampulse.getItem(itemId)
 						.then(item => {
+                            this.report.createTeampulseInfo({ number: prNumber, id: item.id, title: item.fields.Name, url: `${this.config.teampulse.url}/view#item/${item.id}`});
                             this._throwIfFieldMissing(item, requiredFields);
                             return this._setFields(item, fieldsToSet);
 						});
-	}
+    }
 
 	_throwIfFieldMissing(tpItem, requiredFields) {
         let hasMissingField = false;
@@ -116,6 +120,8 @@ class TeampulseService {
         if(!issue.pull_request) {
             throw "Only Pull Requests are supported."
         }
+
+        this.report.createPRInfo({ number: issue.number, title: issue.title, url: issue.pull_request.html_url });
 
         let teampulseItemIds = helper.extractTeamPulseIds(issue.body);
         if(teampulseItemIds.length < 1) {
