@@ -89,6 +89,7 @@ class TeampulseService {
         return github.issues.get(githubOptions)
                                   .then(this._getTeampulseItems.bind(this))
                                   .then(itemIds => Promise.all(_.map(itemIds, itemId => this.updateItemAndValidate({ itemId, fieldsToSet, requiredFields, prNumber }))))
+                                  .then(() => this.report.write());
     }
 
 	updateItemAndValidate({ itemId, fieldsToSet, requiredFields, prNumber }) {
@@ -147,7 +148,7 @@ class TeampulseService {
             })
 
             console.log(`Changing item #${tpItem.id} ${JSON.stringify(oldValues)} -> ${JSON.stringify(changeSet)}` );
-            return teampulse.putItem(tpItem.id, changeSet);
+            //return teampulse.putItem(tpItem.id, changeSet);
         }
         
         console.log(`No fields to change for #${tpItem.id}`)
