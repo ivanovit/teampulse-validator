@@ -20,7 +20,7 @@ class MarkdownReporter {
 		_.forEach(report.getReportMap(), prInfo => {
 			this._writeListItem({ text: `PR [#${prInfo.number}](${prInfo.url}) - ${prInfo.title}`, level: 0 });
 			_.forEach(prInfo.items, item => {
-				this._writeListItem({ text: `TP [#${item.id} ](${item.url}) - ${item.title}`, level: 2 });
+				this._writeListItem({ text: `TP [#${item.id}](${item.url}) - ${item.title}`, level: 2 });
 			});
 		});
 	}
