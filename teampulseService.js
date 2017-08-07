@@ -148,7 +148,7 @@ class TeampulseService {
             })
 
             console.log(`Changing item #${tpItem.id} ${JSON.stringify(oldValues)} -> ${JSON.stringify(changeSet)}` );
-            //return teampulse.putItem(tpItem.id, changeSet);
+            return teampulse.putItem(tpItem.id, changeSet);
         }
         
         console.log(`No fields to change for #${tpItem.id}`)
